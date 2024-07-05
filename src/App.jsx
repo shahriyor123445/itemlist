@@ -4,10 +4,6 @@ import AddItem from "./components/AddItem";
 import Footer from "./components/Footer";
 import Content from "./components/Content";
 import { useState, useEffect } from "react";
-import A from "./components/A";
-import C from "./components/C";
-import MyInput from "./components/MyInput";
-import Container from "./components/Container";
 
 function App() {
   const [items, setItems] = useState([]);
@@ -15,16 +11,9 @@ function App() {
   const [newItem, setNewItem] = useState("");
   const [search, setSearch] = useState("");
   const [fetchError, setFetchError] = useState(null);
-  const [count, setCount] = useState(0);
-  const [text, setText] = useState("");
-  const [color, setColor] = useState("");
-
-  const increment = () => setCount(count + 1);
-  const decrement = () => setCount(count - 1);
-  const reset = () => setCount(0);
+  const api_url = "https://render2-ztsd.onrender.com";
 
   useEffect(() => {
-    const api_url = "http://localhost:3000";
     async function fetchItems() {
       try {
         const response = await fetch(`${api_url}/items`);
@@ -45,10 +34,10 @@ function App() {
     setTimeout(() => {
       fetchItems();
     }, 2000);
-  }, []);
+  }, [api_url]);
 
   async function addItem() {
-    const id = Date.now();
+    const id = String(Date.now());
     const item = {
       id,
       item: newItem,
@@ -71,6 +60,54 @@ function App() {
       setItems(newItems);
     } catch (error) {
       console.error("Error creating new item", error.message);
+    }
+  }
+
+  async function handleDelete(id) {
+    try {
+      const deleteItem = items.find((item) => item.id === id);
+      if (!deleteItem) throw new Error("Item not found");
+
+      const response = await fetch(`${api_url}/items/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Network response was not ok: ${errorText}`);
+      }
+
+      const newItems = items.filter((item) => item.id !== id);
+      setItems(newItems);
+    } catch (error) {
+      console.error("Error deleting item", error.message);
+    }
+  }
+
+  async function handleCheck(id) {
+    try {
+      const updateItem = items.find((item) => item.id === id);
+      if (!updateItem) throw new Error("Item not found");
+
+      const response = await fetch(`${api_url}/items/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "Application/json",
+        },
+        body: JSON.stringify({ checked: !updateItem.checked }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Network response was not ok: ${errorText}`);
+      }
+
+      const newItems = items.map((item) =>
+        item.id === id ? { ...item, checked: !item.checked } : item
+      );
+      setItems(newItems);
+    } catch (error) {
+      console.error("Error updating item", error.message);
     }
   }
 
@@ -98,20 +135,10 @@ function App() {
             items={items.filter((item) =>
               item.item.toLowerCase().includes(search.toLowerCase())
             )}
+            handleDelete={handleDelete}
+            handleCheck={handleCheck}
           />
         )}
-        <A count={count} />
-        <C onIncrement={increment} onDecrement={decrement} onReset={reset} />
-
-        
-
-        <h2>Color State:</h2>
-        <MyInput value={color} onChange={setColor} />
-        <Container color={color}>
-          <p>
-           container
-          </p>
-        </Container>
       </main>
       <Footer />
     </div>
